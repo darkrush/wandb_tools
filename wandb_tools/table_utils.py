@@ -11,6 +11,10 @@ def sign2align(sign: int):
         return '<'
 
 
+def calc_precision(x: float):
+    return int(-np.floor(np.log10(x)))
+
+
 def from_with_std(mean_value: float, std_value: float,
                   width: int, decimals: int = 1,
                   precision: int = None, align: int = 0,
@@ -22,7 +26,7 @@ def from_with_std(mean_value: float, std_value: float,
             prec_value = mean_value
         else:
             prec_value = 1
-        precision = int(-np.floor(np.log10(prec_value)))
+        precision = calc_precision(prec_value)
 
     form_mean = mean_value*(10**precision)
     form_std = std_value*(10**precision)
@@ -46,7 +50,7 @@ def from_wo_std(mean_value: float,
             prec_value = mean_value
         else:
             prec_value = 1
-        precision = int(-np.floor(np.log10(prec_value)))
+        precision = calc_precision(prec_value)
 
     form_mean = mean_value*(10**precision)
     mean_str = '{:>.{}f}'.format(form_mean, decimals)
@@ -78,5 +82,5 @@ def form_result(error_list: List[float], use_std: bool = True):
     mean_str = '{:>6.{}f}'.format(form_mean, 1)
     std_str = '{:<3.{}f}'.format(form_std, 1)
     exp_str = 'e{}{:0>2d}'.format('-' if prec > 0 else '+', abs(prec))
-    #return '{:e}±{:e}'.format(mean_result, std_result)
+    # return '{:e}±{:e}'.format(mean_result, std_result)
     return '{}±{}{}'.format(mean_str, std_str, exp_str)
