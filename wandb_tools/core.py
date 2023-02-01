@@ -12,9 +12,9 @@ import itertools
 import pandas
 import numpy as np
 from wandb import sdk as wandb_sdk
-
 from wandb.apis.public import File as wandb_File
 from wandb_tools.utils import dict_equal, diff_config
+from .config import CONFIG_DICT
 
 logger = logging.getLogger(__name__)
 api = wandb.Api()
@@ -22,8 +22,7 @@ api = wandb.Api()
 CONFIG_NAME = 'config.json'
 HISTORY_NAME = 'history.pkl'
 META_NAME = 'wandb-metadata.json'
-CARED_KEY_LIST = ['NT', 'NC', 'dataset', 'state_name',
-                  'base_module', 'input_noise', 'control_name', 'lr']
+CARED_KEY_LIST = CONFIG_DICT['CARED_KEY_LIST']
 
 
 class Siblings:
@@ -50,7 +49,10 @@ class Siblings:
         self._runID_list.append(runID)
 
     def __str__(self) -> str:
-        return "config: {}\nrunID: {}\ncommand: {}".format(self._config, '|'.join(self._runID_list), self._command)
+        config_str = 'config: {}'.format(self._config)
+        runID_str = 'runID: {}'.format('|'.join(self._runID_list))
+        command_str = 'command: {}'.format(self._command)
+        return '\n'.join([config_str, runID_str, command_str])
 
     def __repr__(self) -> str:
         return self.__str__()
@@ -117,7 +119,7 @@ class Wandb_Local:
         meta_path = self._path_of_meta(runID)
         with open(meta_path, 'r') as f:
             meta = json.load(f)
-        args_list:List[str] = meta['args']
+        args_list: List[str] = meta['args']
         if exlude_seed:
             seed_idx = args_list.index('--seed')
             args_list[seed_idx+1] = '${SEED}'
@@ -277,22 +279,3 @@ def find_all_groups(siblings_dict: Dict[str, Siblings]):
         for group in group_list:
             unconvered_list.difference_update(group.list_sibs_hash())
     return group_list_dict, list(unconvered_list)
-
-
-
-'''
-    def get_metric_result(self,):
-        result_dict: Dict[str, List[float]] = {}
-        for runID in self._runID_list:
-            his_path = self._parent_local._path_of_history(runID)
-            with open(his_path, 'rb') as f:
-                df_history: pandas.DataFrame = pickle.load(f)
-            metric_key_list = [key for key in df_history.keys()
-                               if key.startswith('loop_test')]
-            for mk in metric_key_list:
-                if mk in result_dict.keys():
-                    result_dict[mk].append(df_history[mk].iloc[-1])
-                else:
-                    result_dict[mk] = [df_history[mk].iloc[-1]]
-        return result_dict
-'''

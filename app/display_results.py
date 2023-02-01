@@ -20,11 +20,10 @@ logger = logging.getLogger(__name__)
 @click.option('--dbpath',
               default='/home/qiujiantao/project/wandb_tools/cache_database',
               help='cache db dir')
-@click.option('--key',
-              default='input_noise',
-              help='cache db dir')
-def find_groups(enterpoint: str, dbpath: str, key: str):
-    TEXT_WIDTH=18
+@click.option('--key', help='the main key of results')
+@click.option('--width', default=18, help='the text width')
+def find_groups(enterpoint: str, dbpath: str, key: str, width: int):
+    TEXT_WIDTH = width
     metric_keys = ['loop_test/mean_dis_error', 'loop_test/mean_vel_error',
                    'loop_test/mean_yaw_error']
     wandb_local = Wandb_Local(enterpoint, dbpath)
