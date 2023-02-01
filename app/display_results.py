@@ -24,6 +24,7 @@ logger = logging.getLogger(__name__)
               default='input_noise',
               help='cache db dir')
 def find_groups(enterpoint: str, dbpath: str, key: str):
+    TEXT_WIDTH=18
     metric_keys = ['loop_test/mean_dis_error', 'loop_test/mean_vel_error',
                    'loop_test/mean_yaw_error']
     wandb_local = Wandb_Local(enterpoint, dbpath)
@@ -39,12 +40,13 @@ def find_groups(enterpoint: str, dbpath: str, key: str):
         diff_keys.remove(key)
     highlight_keys = [key,] + diff_keys
     print(highlight_keys)
-    tabulate_keys = highlight_keys + metric_keys
+    tabulate_keys = ['sib_hash'] + highlight_keys + metric_keys
     for group in group_list:
-        raw_data_list = []
+        raw_data_list: List[Dict] = []
         for sib_hash in group.list_sibs_hash():
             siblings = siblings_dict[sib_hash]
-            row_dict = {k: siblings._config[k] for k in highlight_keys}
+            row_dict = {k: str(siblings._config[k]) for k in highlight_keys}
+            row_dict['sib_hash'] = sib_hash
             metric_dict_list: List[Dict[str, Any]] = []
             for runID in siblings._runID_list:
                 history_df = wandb_local.get_history(runID)
@@ -74,12 +76,12 @@ def find_groups(enterpoint: str, dbpath: str, key: str):
                 return '{} {}'.format(str1, str2)
             raw_df[k] = raw_df[k].apply(format_raw)
 
-        for k in highlight_keys+metric_keys:
+        for k in tabulate_keys:
             raw_column = list(raw_df[k])
-            raw_df[k] = raw_df[k].apply(lambda x: textwrap.fill(x, width=12))
-        raw_df.columns = [textwrap.fill(k, width=12) for k in raw_df.columns]
+            raw_df[k] = raw_df[k].apply(lambda x: textwrap.fill(x, width=TEXT_WIDTH))
+        raw_df.columns = [textwrap.fill(k, width=TEXT_WIDTH) for k in raw_df.columns]
 
-        print(tabulate(raw_df, headers="keys", tablefmt="grid"))
+        print(tabulate(raw_df, headers="keys", tablefmt="grid", showindex=False))
 
 
 if __name__ == '__main__':

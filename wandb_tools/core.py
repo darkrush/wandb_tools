@@ -12,6 +12,8 @@ import itertools
 import pandas
 import numpy as np
 from wandb import sdk as wandb_sdk
+
+from wandb.apis.public import File as wandb_File
 from wandb_tools.utils import dict_equal, diff_config
 
 logger = logging.getLogger(__name__)
@@ -19,14 +21,16 @@ api = wandb.Api()
 
 CONFIG_NAME = 'config.json'
 HISTORY_NAME = 'history.pkl'
+META_NAME = 'wandb-metadata.json'
 CARED_KEY_LIST = ['NT', 'NC', 'dataset', 'state_name',
-                  'base_module', 'input_noise', 'control_name']
+                  'base_module', 'input_noise', 'control_name', 'lr']
 
 
 class Siblings:
-    def __init__(self, config: Dict[str, Any],
+    def __init__(self, config: Dict[str, Any], command: str, 
                  exclude_keys: List[str] = ['seed']):
         self._config: Dict[str, Any] = copy.deepcopy(config)
+        self._command: str = command
         self._exclude_keys: List[str] = copy.deepcopy(exclude_keys)
         for key in self._exclude_keys:
             self._config.pop(key, None)
@@ -46,7 +50,7 @@ class Siblings:
         self._runID_list.append(runID)
 
     def __str__(self) -> str:
-        return "config:{}\nrunID:{}".format(self._config, self._runID_list)
+        return "config: {}\nrunID: {}\ncommand: {}".format(self._config, '|'.join(self._runID_list), self._command)
 
     def __repr__(self) -> str:
         return self.__str__()
@@ -82,6 +86,9 @@ class Wandb_Local:
     def _path_of_config(self, runID: str):
         return os.path.join(self._path_of_run(runID), CONFIG_NAME)
 
+    def _path_of_meta(self, runID: str):
+        return os.path.join(self._path_of_run(runID), META_NAME)
+
     def _path_of_history(self, runID: str):
         return os.path.join(self._path_of_run(runID), HISTORY_NAME)
 
@@ -105,6 +112,19 @@ class Wandb_Local:
         with open(config_path, 'r') as f:
             config = json.load(f)
         return config
+
+    def get_command(self, runID: str, exlude_seed: bool = True):
+        meta_path = self._path_of_meta(runID)
+        with open(meta_path, 'r') as f:
+            meta = json.load(f)
+        args_list:List[str] = meta['args']
+        if exlude_seed:
+            seed_idx = args_list.index('--seed')
+            args_list[seed_idx+1] = '${SEED}'
+        args_str = ' '.join(args_list)
+        codepath = meta['codePath']
+
+        return '{} {}'.format(codepath, args_str)
 
     def get_history(self, runID: str):
         his_path = self._path_of_history(runID)
@@ -136,32 +156,48 @@ class Wandb_Local:
                 continue
             if run.state not in ['finished']:
                 continue
-
             logger.debug("check for {}".format(runID))
             local_run_dir = self._path_of_run(runID)
             config_path = self._path_of_config(runID)
+            meta_path = self._path_of_meta(runID)
             feather_path = self._path_of_history(runID)
 
-            need_update_flag = False
-
+            need_update_flag_dict = {}
+            item_dict = {'config': config_path,
+                         'history': feather_path,
+                         'meta': meta_path}
             if runID in self._local_runID_list:
-                if not os.path.exists(config_path):
-                    need_update_flag = True
-                if not os.path.exists(feather_path):
-                    need_update_flag = True
+                for key, path in item_dict.items():
+                    need_update_flag_dict[key] = not os.path.exists(path)
             else:
-                need_update_flag = True
+                for key, path in item_dict.items():
+                    need_update_flag_dict[key] = True
 
-            if need_update_flag:
-                logger.info("{} need to update".format(runID))
+            if any(need_update_flag_dict.values()):
+                update_list = [key for key, v in need_update_flag_dict.items() if v]
+                logger.info("{} need to update {}".format(runID, update_list))
+
                 if not os.path.exists(local_run_dir):
                     os.makedirs(local_run_dir)
-                config = run.config
-                with open(config_path, 'w') as f:
-                    json.dump(config, f)
-                df_history = run.history()
-                with open(feather_path, 'wb') as f:
-                    pickle.dump(df_history, f)
+
+                if need_update_flag_dict['config']:
+                    config = run.config
+                    with open(config_path, 'w') as f:
+                        json.dump(config, f, indent=2)
+
+                if need_update_flag_dict['history']:
+                    config = run.config
+                    df_history = run.history()
+                    with open(feather_path, 'wb') as f:
+                        pickle.dump(df_history, f)
+
+                if need_update_flag_dict['meta']:
+                    wandb_metafile: wandb_File = run.file("wandb-metadata.json")
+                    temp_dir = os.path.join('/tmp', self._enterpoint)
+                    file_IO = wandb_metafile.download(root=temp_dir, replace=True)
+                    meta = json.load(file_IO)
+                    with open(meta_path, 'w') as f:
+                        json.dump(meta, f, indent=2)
                 logger.info("{} updated".format(runID))
             else:
                 logger.info("{} already cached in local".format(runID))
@@ -178,13 +214,14 @@ def build_siblings(wandb_local: Wandb_Local):
     siblings_list: List[Siblings] = []
     for runID in wandb_local.list_runID():
         config = wandb_local.get_config(runID)
+        command = wandb_local.get_command(runID)
         target_siblings = None
         for siblings in siblings_list:
             if siblings.check_in_siblings(config):
                 target_siblings = siblings
                 break
         if target_siblings is None:
-            target_siblings = Siblings(config)
+            target_siblings = Siblings(config, command)
             siblings_list.append(target_siblings)
         target_siblings.append_runID(runID)
     return {sib.config_hash: sib for sib in siblings_list}
