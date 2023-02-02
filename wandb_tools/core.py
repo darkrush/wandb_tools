@@ -27,7 +27,7 @@ METRICS_LIST = CONFIG_DICT['METRICS_LIST']
 
 
 class Siblings:
-    def __init__(self, config: Dict[str, Any], command: str, 
+    def __init__(self, config: Dict[str, Any], command: str,
                  exclude_keys: List[str] = ['seed']):
         self._config: Dict[str, Any] = copy.deepcopy(config)
         self._command: str = command
