@@ -1,6 +1,6 @@
 import click
-from wandb_tools.core import (Wandb_Local, build_siblings, find_all_groups,
-                              CARED_KEY_LIST)
+from wandb_tools.core import Wandb_Local, build_siblings, find_all_groups
+from wandb_tools.core import CARED_KEY_LIST, METRICS_LIST
 from wandb_tools.utils import diff_configs
 import pandas as pd
 from tabulate import tabulate
@@ -15,17 +15,16 @@ logger = logging.getLogger(__name__)
 
 @click.command()
 @click.option('--enterpoint',
-              default='shlab_qiujiantao/VDS_NN_Formal',
+              default='shlab_qiujiantao/VDS_NN_Kinetic_v2',
               help='enterpoint of wandb')
 @click.option('--dbpath',
               default='/home/qiujiantao/project/wandb_tools/cache_database',
               help='cache db dir')
 @click.option('--key', help='the main key of results')
 @click.option('--width', default=18, help='the text width')
-def find_groups(enterpoint: str, dbpath: str, key: str, width: int):
+def main(enterpoint: str, dbpath: str, key: str, width: int):
     TEXT_WIDTH = width
-    metric_keys = ['loop_test/mean_dis_error', 'loop_test/mean_vel_error',
-                   'loop_test/mean_yaw_error']
+
     wandb_local = Wandb_Local(enterpoint, dbpath)
     siblings_dict = build_siblings(wandb_local)
 
@@ -39,7 +38,7 @@ def find_groups(enterpoint: str, dbpath: str, key: str, width: int):
         diff_keys.remove(key)
     highlight_keys = [key,] + diff_keys
     print(highlight_keys)
-    tabulate_keys = ['sib_hash'] + highlight_keys + metric_keys
+    tabulate_keys = ['sib_hash'] + highlight_keys + METRICS_LIST
     for group in group_list:
         raw_data_list: List[Dict] = []
         for sib_hash in group.list_sibs_hash():
@@ -49,9 +48,9 @@ def find_groups(enterpoint: str, dbpath: str, key: str, width: int):
             metric_dict_list: List[Dict[str, Any]] = []
             for runID in siblings._runID_list:
                 history_df = wandb_local.get_history(runID)
-                run_value_dict = {k: float(history_df[k].iloc[-1]) for k in metric_keys}
+                run_value_dict = {k: float(history_df[k].iloc[-1]) for k in METRICS_LIST}
                 metric_dict_list.append(run_value_dict)
-            for k in metric_keys:
+            for k in METRICS_LIST:
                 value_vector = np.array([m[k] for m in metric_dict_list])
                 valid_num = np.count_nonzero(~np.isnan(value_vector))
                 run_num = len(value_vector)
@@ -64,7 +63,7 @@ def find_groups(enterpoint: str, dbpath: str, key: str, width: int):
         raw_data_list.sort(key=lambda x: x[key])
         raw_df = pd.DataFrame(raw_data_list, columns=tabulate_keys)
 
-        for k in metric_keys:
+        for k in METRICS_LIST:
             raw_column = list(raw_df[k])
             min_std = min([ele['std'] for ele in raw_column])
 
@@ -84,4 +83,4 @@ def find_groups(enterpoint: str, dbpath: str, key: str, width: int):
 
 
 if __name__ == '__main__':
-    find_groups()
+    main()

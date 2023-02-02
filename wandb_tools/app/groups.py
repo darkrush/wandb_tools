@@ -8,7 +8,7 @@ logger = logging.getLogger(__name__)
 
 @click.command()
 @click.option('--enterpoint',
-              default='shlab_qiujiantao/VDS_NN_Formal',
+              default='shlab_qiujiantao/VDS_NN_Kinetic_v2',
               help='enterpoint of wandb')
 @click.option('--dbpath',
               default='/home/qiujiantao/project/wandb_tools/cache_database',

@@ -23,6 +23,7 @@ CONFIG_NAME = 'config.json'
 HISTORY_NAME = 'history.pkl'
 META_NAME = 'wandb-metadata.json'
 CARED_KEY_LIST = CONFIG_DICT['CARED_KEY_LIST']
+METRICS_LIST = CONFIG_DICT['METRICS_LIST']
 
 
 class Siblings:
@@ -118,14 +119,16 @@ class Wandb_Local:
     def get_command(self, runID: str, exlude_seed: bool = True):
         meta_path = self._path_of_meta(runID)
         with open(meta_path, 'r') as f:
-            meta = json.load(f)
+            meta: Dict = json.load(f)
         args_list: List[str] = meta['args']
         if exlude_seed:
             seed_idx = args_list.index('--seed')
             args_list[seed_idx+1] = '${SEED}'
         args_str = ' '.join(args_list)
-        codepath = meta['codePath']
-
+        if 'codePath' in meta.keys():
+            codepath = meta['codePath']
+        elif 'program' in meta.keys():
+            codepath = meta['program'].split('/')[-1]
         return '{} {}'.format(codepath, args_str)
 
     def get_history(self, runID: str):

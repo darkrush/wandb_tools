@@ -8,7 +8,7 @@ logger = logging.getLogger(__name__)
 
 @click.command()
 @click.option('--enterpoint',
-              default='shlab_qiujiantao/VDS_NN_Formal',
+              default='shlab_qiujiantao/VDS_NN_Kinetic_v2',
               help='enterpoint of wandb')
 @click.option('--dbpath',
               default='/home/qiujiantao/project/wandb_tools/cache_database',
@@ -28,7 +28,7 @@ def get_siblings(enterpoint, dbpath, sibs):
             print()
     else:
         sibs_hashcode_list = [code for code in siblings_dict.keys() if sibs in code]
-        
+
         print('Found {} in project'.format(len(sibs_hashcode_list)))
         for idx, hashcode in enumerate(sorted(sibs_hashcode_list)):
             print('*********{}: {} start*********'.format(idx, hashcode))
