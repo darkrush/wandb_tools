@@ -12,6 +12,8 @@ def sign2align(sign: int):
 
 
 def calc_precision(x: float):
+    if np.isnan(x):
+        return x
     return int(-np.floor(np.log10(x)))
 
 
@@ -27,16 +29,22 @@ def from_with_std(mean_value: float, std_value: float,
         else:
             prec_value = 1
         precision = calc_precision(prec_value)
+    elif np.isnan(precision):
+        precision = calc_precision(mean_value)
 
     form_mean = mean_value*(10**precision)
     form_std = std_value*(10**precision)
     mean_str = '{:>.{}f}'.format(form_mean, decimals)
-    std_str = '{:<.{}f}'.format(form_std, decimals)
+    if np.isnan(std_value):
+        std_str = ''
+    else:
+        std_str = '±{:<.{}f}'.format(form_std, decimals)
+
     if show_exp:
         exp_str = 'e{}{:0>2d}'.format('-' if precision > 0 else '+', abs(precision))
     else:
         exp_str = ''
-    result_str = '{}±{}{}'.format(mean_str, std_str, exp_str)
+    result_str = '{}{}{}'.format(mean_str, std_str, exp_str)
     formed_str = '{:{}{}s}'.format(result_str, sign2align(align), width)
     return formed_str
 

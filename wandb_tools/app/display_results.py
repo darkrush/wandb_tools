@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
               default='/home/qiujiantao/project/wandb_tools/cache_database',
               help='cache db dir')
 @click.option('--key', help='the main key of results')
-@click.option('--width', default=18, help='the text width')
+@click.option('--width', default=16, help='the text width')
 def main(enterpoint: str, dbpath: str, key: str, width: int):
     TEXT_WIDTH = width
 
@@ -31,6 +31,8 @@ def main(enterpoint: str, dbpath: str, key: str, width: int):
     group_list_dict, uncoverd_list = find_all_groups(siblings_dict)
     group_list = group_list_dict[key]
     print('========={} start========='.format(key))
+    if len(group_list) == 0:
+        return
     config_list = [siblings_dict[group.list_sibs_hash()[0]]._config
                    for group in group_list]
     diff_keys = diff_configs(config_list, CARED_KEY_LIST)
@@ -44,7 +46,7 @@ def main(enterpoint: str, dbpath: str, key: str, width: int):
         for sib_hash in group.list_sibs_hash():
             siblings = siblings_dict[sib_hash]
             row_dict = {k: str(siblings._config[k]) for k in highlight_keys}
-            row_dict['sib_hash'] = sib_hash
+            row_dict['sib_hash'] = '{}:{}'.format(sib_hash, len(siblings._runID_list))
             metric_dict_list: List[Dict[str, Any]] = []
             for runID in siblings._runID_list:
                 history_df = wandb_local.get_history(runID)
@@ -70,7 +72,7 @@ def main(enterpoint: str, dbpath: str, key: str, width: int):
             def format_raw(raw_data: dict):
                 str1 = from_with_std(raw_data['mean'], raw_data['std'],
                                      width=14, precision=calc_precision(min_std))
-                str2 = '{}/{}'.format(raw_data['valid_num'], raw_data['run_num'])
+                str2 = '{}'.format(raw_data['valid_num'])
                 return '{} {}'.format(str1, str2)
             raw_df[k] = raw_df[k].apply(format_raw)
 

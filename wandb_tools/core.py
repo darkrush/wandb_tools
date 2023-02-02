@@ -161,6 +161,8 @@ class Wandb_Local:
                 continue
             if run.state not in ['finished']:
                 continue
+            if len(run.config.keys()) == 0:
+                continue
             logger.debug("check for {}".format(runID))
             local_run_dir = self._path_of_run(runID)
             config_path = self._path_of_config(runID)
