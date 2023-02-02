@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 @click.option('--dbpath',
               default='/home/qiujiantao/project/wandb_tools/cache_database',
               help='cache db dir')
-def find_groups(enterpoint, dbpath):
+def main(enterpoint, dbpath):
     wandb_local = Wandb_Local(enterpoint, dbpath)
     siblings_dict = build_siblings(wandb_local)
 
@@ -27,4 +27,4 @@ def find_groups(enterpoint, dbpath):
 
 
 if __name__ == '__main__':
-    find_groups()
+    main()

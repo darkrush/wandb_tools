@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 @click.option('--sibs',
               default=None,
               help='sib to find')
-def get_siblings(enterpoint, dbpath, sibs):
+def main(enterpoint, dbpath, sibs):
     wandb_local = Wandb_Local(enterpoint, dbpath)
     siblings_dict = build_siblings(wandb_local)
     if sibs is None:
@@ -38,4 +38,4 @@ def get_siblings(enterpoint, dbpath, sibs):
 
 
 if __name__ == '__main__':
-    get_siblings()
+    main()
